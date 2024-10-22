@@ -1,5 +1,9 @@
-# duguang-ocr-onnx
-
+<br>
+<h1 align="center">读光 OCR ONNX</h1>
+<br>
+<p align="center">
+<a href="https://github.com/xxx/xxx/blob/master/README_en_US.md">中文</a> &nbsp;|&nbsp; <a href="">English</a>
+</p>
 
 ## ✨简介
 
