@@ -50,6 +50,7 @@ small(5.2MB)  [地址](https://www.modelscope.cn/models/iic/cv_proxylessnas_ocr-
 
 ## 📍测试
 
+速度
 
 
 
@@ -59,3 +60,7 @@ small(5.2MB)  [地址](https://www.modelscope.cn/models/iic/cv_proxylessnas_ocr-
 [读光-文字识别-行识别模型-中英-通用领域](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)
 
 [读光-文字检测-DBNet行检测模型-中英-通用领域](https://www.modelscope.cn/models/iic/cv_resnet18_ocr-detection-db-line-level_damo/summary)
+
+[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
+
+[modelscope](https://github.com/modelscope/modelscope)
