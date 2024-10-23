@@ -58,8 +58,10 @@ ocr = DGOCR(rec_path, det_path, img_size)
 
 img_path = "data/test.png"   # 图片案例
 
+# 识别图片
 ocr_result = ocr.run(img_path)
 
+# 打印结果
 for i in range(len(ocr_result)):
     print(f"第{i}个框")
     print(f"{ocr_result[i]}")
@@ -77,8 +79,6 @@ ocr.draw(img_path, ocr_result, save_path)
 三部分分别是
 [box, score, text]; box 为文本框四个点坐标, score文本框的置信度 [0-1], text 为识别的文本
 ```
-
-
 
 ## 📍测试
 
