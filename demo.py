@@ -14,8 +14,10 @@ ocr = DGOCR(rec_path, det_path, img_size)
 
 img_path = "data/test.png"
 
+# 识别图片
 ocr_result = ocr.run(img_path)
 
+# 打印结果
 for i in range(len(ocr_result)):
     print(f"第{i}个框")
     print(f"{ocr_result[i]}")
