@@ -35,10 +35,10 @@ pillow
 
 需要下载下面表格中一对文字识别和检测模型。
 
-| 模型  | 模型大小      | 模型原始仓库                                                 | 百度网盘下载                                                 | modelscope下载                                               |
-| ----- | ------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| large | 73.2MB+46.4MB | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_resnet18_ocr-detection-db-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1BQeeOelYU0N5PJSuf_kG3A?pwd=gztj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) |
-| small | 7.4MB+5.2MB   | rec[地址](https://modelscope.cn/models/iic/cv_LightweightEdge_ocr-recognitoin-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_proxylessnas_ocr-detection-db-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1kyWRX18-5MRkizyoGz-I7Q?pwd=khkj ) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) |
+| 模型  | 模型大小      | 模型原始仓库                                                                                                                                                                                             | 百度网盘下载                                                  | modelscope下载                                                     |
+| ----- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ |
+| large | 73.2MB+46.4MB | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_resnet18_ocr-detection-db-line-level_damo/summary)        | [地址](https://pan.baidu.com/s/1BQeeOelYU0N5PJSuf_kG3A?pwd=gztj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) |
+| small | 7.4MB+5.2MB   | rec[地址](https://modelscope.cn/models/iic/cv_LightweightEdge_ocr-recognitoin-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_proxylessnas_ocr-detection-db-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1kyWRX18-5MRkizyoGz-I7Q?pwd=khkj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) |
 
 > rec 为文本识别模型，det为文本检测模型
 
@@ -52,9 +52,10 @@ rec_path = r"models/large/recognition_model_general"
 # 文本框检测模型文件路径
 det_path = r"models/large/detection_model_general/model_1600x1600.onnx"
 img_size=1600  # 文本框检测模型的输入图片大小限制
+cpu_num_thread=2 # onnx 运行线程数
 
 # 初始化模型
-ocr = DGOCR(rec_path, det_path, img_size)
+ocr = DGOCR(rec_path, det_path, img_size, cpu_num_thread=cpu_num_thread)
 
 img_path = "data/test.png"   # 图片案例
 
@@ -77,12 +78,30 @@ ocr.draw(img_path, ocr_result, save_path)
 [[[75, 610], [731, 631], [729, 672], [74, 651]], 0.6671288197716327, '家记忆研究院国家记忆研究院波']
 
 三部分分别是
-[box, score, text]; box 为文本框四个点坐标, score文本框的置信度 [0-1], text 为识别的文本
+[box, score, text]; box 为文本框四个点坐标, score 为文本框的置信度[0-1], text 为识别的文本
 ```
 
 ## 📍测试
 
-20张图片
+> 20张图片
+>
+> CPU AMD R7 7840HS (3.80 GHz) 8核16线程
+
+**模型大小：large**
+
+| cpu_num_thread | 平均速度（s） | 速度区间  | 峰值内存(MB) | 闲时内存(MB) |
+| -------------- | ------------- | --------- | ------------ | ------------ |
+| 1              | 3.6           | [2.2-6.9] | 976          | 219          |
+| 2              | 2.07          | [1.1-4.2] | 976          | 219          |
+| 4              | 1.64          | [0.8-4.2] | 976          | 219          |
+
+**模型大小：small**
+
+| cpu_num_thread | 平均速度（s） | 速度区间   | 峰值内存(MB) | 闲时内存(MB) |
+| -------------- | ------------- | ---------- | ------------ | ------------ |
+| 1              | 1.15          | [0.9-1.5]  | 560          | 118          |
+| 2              | 0.85          | [0.64-1.2] | 560          | 118          |
+| 4              | 0.76          | [0.57-1.1] | 560          | 118          |
 
 ## 感谢
 
@@ -93,3 +112,5 @@ ocr.draw(img_path, ocr_result, save_path)
 [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
 
 [modelscope](https://github.com/modelscope/modelscope)
+
+[ONNXRuntime CPU推理优化 ](https://rapidai.github.io/RapidOCRDocs/blog/2022/09/23/onnxruntime-cpu%E6%8E%A8%E7%90%86%E4%BC%98%E5%8C%96/)

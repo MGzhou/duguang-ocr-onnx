@@ -16,7 +16,7 @@ from .visual import draw_ocr_box_txt
 from .utils import crop_image, order_point, preprocess, postprocess
 
 class DGOCR:
-    def __init__(self, rec_path, det_path, img_size=1600) -> None:
+    def __init__(self, rec_path, det_path, img_size=1600, cpu_num_thread=2) -> None:
         """
         初始化模型
 
@@ -24,18 +24,20 @@ class DGOCR:
             rec_path (str): 文字识别模型文件夹路径
             det_path (str): 文本框检测模型文件路径
             img_size (int, optional): 模型限定的图像大小. Defaults to 1600.
+            cpu_num_thread (int, optional): CPU线程数, 默认为 2. 越大速度越快，但占用资源越多
         """
         self.rec_path = rec_path
         self.det_path = det_path
         self.img_size = img_size
+        self.cpu_num_thread = cpu_num_thread
         self.load_model()
 
     def load_model(self):
         # 加载模型
         # 文字识别模型
-        self.rec_model = DGOCRRecognition(self.rec_path)
+        self.rec_model = DGOCRRecognition(self.rec_path, self.cpu_num_thread)
         # 文本框检测模型
-        self.det_model = DGOCRDetection(self.det_path, self.img_size)
+        self.det_model = DGOCRDetection(self.det_path, self.img_size, self.cpu_num_thread)
 
     def run(self, image):
         """

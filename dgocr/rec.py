@@ -7,21 +7,34 @@ import onnxruntime as rt
 import cv2
 
 class DGOCRRecognition:
-    def __init__(self, model_path) -> None:
+    def __init__(self, model_path, cpu_num_thread=2) -> None:
         """读光OCR文字识别模型 onnx 版本使用
 
         Args:
             model (str): 模型路径
+            cpu_num_thread (int, optional): CPU线程数, 默认为 2
         """
         self.model_file = self.find_model_file(model_path)
-        
+        self.cpu_num_thread = cpu_num_thread
         # 加载模型
         self.load_model()
 
     
     def load_model(self):
         """加载模型"""
-        self.sess = rt.InferenceSession(self.model_file["model"])
+        # 创建一个SessionOptions对象
+        rtconfig = rt.SessionOptions()
+        
+        # 设置CPU线程数
+        rtconfig.intra_op_num_threads = self.cpu_num_thread
+        # 并行 ORT_PARALLEL  顺序 ORT_SEQUENTIAL
+        rtconfig.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+        rtconfig.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
+        rtconfig.log_severity_level = 4
+        rtconfig.enable_cpu_mem_arena = False
+        # rtconfig.enable_profiling = True
+
+        self.sess = rt.InferenceSession(self.model_file["model"], sess_options=rtconfig)
         self.input_name = self.sess.get_inputs()[0].name
         self.output_name= self.sess.get_outputs()[0].name
         

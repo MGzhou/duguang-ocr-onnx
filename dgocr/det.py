@@ -6,23 +6,37 @@ import cv2
 import numpy as np
 import pyclipper
 from shapely.geometry import Polygon
-import onnxruntime as ort
+import onnxruntime as rt
 
 class DGOCRDetection:
-    def __init__(self, model_path, img_size=1600):
+    def __init__(self, model_path, img_size=1600, cpu_num_thread=2):
         """读光OCR文字框检测模型 onnx 版本使用
 
         Args:
             model_path (str): 模型路径, xxx.onnx
+            img_size (int, optional): 模型限制图片大小, 默认为 1600, 要是800的倍数增加，越大越精确，但速度会变慢
+            cpu_num_thread (int, optional): CPU线程数, 默认为 2
         """
         self.model_path = model_path
         self.img_size = img_size
-
+        self.cpu_num_thread = cpu_num_thread
         self.load_model()
     
     def load_model(self):
         """加载模型"""
-        self.ort_session = ort.InferenceSession(self.model_path)
+        # 创建一个SessionOptions对象
+        rtconfig = rt.SessionOptions()
+        
+        # 设置CPU线程数
+        rtconfig.intra_op_num_threads = self.cpu_num_thread
+        # 并行 ORT_PARALLEL  顺序 ORT_SEQUENTIAL
+        rtconfig.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+        rtconfig.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
+        rtconfig.log_severity_level = 4
+        rtconfig.enable_cpu_mem_arena = False
+        # rtconfig.enable_profiling = True  #  生成一个类似onnxruntime_profile__2023-05-07_09-02-15.json的日志文件，包含详细的性能数据（线程、每个运算符的延迟等）。
+
+        self.ort_session = rt.InferenceSession(self.model_path, sess_options=rtconfig)
 
         
     def run(self, image):
