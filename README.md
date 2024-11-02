@@ -35,50 +35,27 @@ pillow
 
 需要下载下面表格中一对文字识别和检测模型。
 
-| 模型  | 模型大小      | 模型原始仓库                                                                                                                                                                                             | 百度网盘下载                                                  | modelscope下载                                                     |
-| ----- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ |
-| large | 73.2MB+46.4MB | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_resnet18_ocr-detection-db-line-level_damo/summary)        | [地址](https://pan.baidu.com/s/1BQeeOelYU0N5PJSuf_kG3A?pwd=gztj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) |
-| small | 7.4MB+5.2MB   | rec[地址](https://modelscope.cn/models/iic/cv_LightweightEdge_ocr-recognitoin-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_proxylessnas_ocr-detection-db-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1kyWRX18-5MRkizyoGz-I7Q?pwd=khkj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) |
+| 模型           | 模型大小      | 模型原始仓库                                                                                                                                                                                             | 百度网盘下载                                                  | modelscope下载                                                     | 个人评价 |
+| -------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ | -------- |
+| base_seglink++ | 73.2MB+78MB   | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://modelscope.cn/models/iic/cv_resnet18_ocr-detection-line-level_damo/summary)               | [地址](https://pan.baidu.com/s/1HRDW2-JFnzDoMcdU560OlA?pwd=qjl8) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) | 9分      |
+| large          | 73.2MB+46.4MB | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_resnet18_ocr-detection-db-line-level_damo/summary)        | [地址](https://pan.baidu.com/s/1BQeeOelYU0N5PJSuf_kG3A?pwd=gztj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) | 8分      |
+| small          | 7.4MB+5.2MB   | rec[地址](https://modelscope.cn/models/iic/cv_LightweightEdge_ocr-recognitoin-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_proxylessnas_ocr-detection-db-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1kyWRX18-5MRkizyoGz-I7Q?pwd=khkj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) | 5分      |
 
 > rec 为文本识别模型，det为文本检测模型
 
 ### 使用示例
 
-```python
-from dgocr.dgocr import DGOCR
+base_seglink++：`demo_seglink.py`
 
-# 文字识别模型路径
-rec_path = r"models/large/recognition_model_general"
-# 文本框检测模型文件路径
-det_path = r"models/large/detection_model_general/model_1600x1600.onnx"
-img_size=1600  # 文本框检测模型的输入图片大小限制
-cpu_num_thread=2 # onnx 运行线程数
-
-# 初始化模型
-ocr = DGOCR(rec_path, det_path, img_size, cpu_num_thread=cpu_num_thread)
-
-img_path = "data/test.png"   # 图片案例
-
-# 识别图片
-ocr_result = ocr.run(img_path)
-
-# 打印结果
-for i in range(len(ocr_result)):
-    print(f"第{i}个框")
-    print(f"{ocr_result[i]}")
-
-# 可视化
-save_path = "data/result.png"
-ocr.draw(img_path, ocr_result, save_path)
-```
+large，small：`demo.py`
 
 打印结果说明
 
 ```
-[[[75, 610], [731, 631], [729, 672], [74, 651]], 0.6671288197716327, '家记忆研究院国家记忆研究院波']
+[[[73.0, 612.0], [729.0, 626.0], [728.0, 670.0], [72.0, 656.0]], ('家记忆研究院国家记忆研究院波', 0.9971)]
 
 三部分分别是
-[box, score, text]; box 为文本框四个点坐标, score 为文本框的置信度[0-1], text 为识别的文本
+[box, (text,score)]; box 为文本框四个点坐标, text 为识别的文本, score 为文本的置信度
 ```
 
 ## 📍测试
@@ -86,6 +63,14 @@ ocr.draw(img_path, ocr_result, save_path)
 > 20张图片
 >
 > CPU AMD R7 7840HS (3.80 GHz) 8核16线程
+
+**base_seglink++**
+
+| cpu_num_thread | 平均速度（s） | 速度区间     | 峰值内存(MB) | 闲时内存(MB) |
+| -------------- | ------------- | ------------ | ------------ | ------------ |
+| 1              | 3.86          | [2.53, 6.37] | 512          | 243          |
+| 2              | 2.28          | [1.36, 4.22] | 512          | 243          |
+| 4              | 1.57          | [0.82, 3.33] | 512          | 243          |
 
 **模型大小：large**
 

@@ -487,15 +487,12 @@ def merge_fragmented(boxes, x_threshold=10, y_threshold=10):
 
 if __name__ == "__main__":
 
-    img_path = r"E:\Code\PythonCode\ocr\test\img-10.png"
-    save_path = r"E:\Code\PythonCode\ocr\test\\resize_out2.png"
+    img_path = r""
+    save_path = r""
     image = Image.open(img_path).convert('RGB')
-    boxes1 = [[[220, 251], [393, 251], [393, 270], [220, 270]], [[43, 233], [66, 232], [66, 249], [44, 250]], [[374, 181], [406, 180], [407, 197], [375, 197]], [[24, 136], [87, 136], [87, 156], [24, 156]], [[220, 78], [393, 78], [393, 96], [220, 96]], [[393, 6], [425, 5], [426, 21], [393, 21]]]
+    boxes1 = [[[220, 251], [393, 251], [393, 270], [220, 270]]]
     
-    txts = ['第二电机电控电路', '12', '102', '电池包', '第一电机电控电路', '101']
-    scores = [0.9 for i in boxes1]   # 虚拟的置信度
-    # im_show = draw_ocr(image, boxes, txts, scores, font_path=r'D:\PycharmProjects\TaskCode\task23_ai_img\test\simfang.ttf')
-    # im_show = draw_ocr_box_txt(image, boxes1, txts, scores, drop_score=0.1, font_path=r'E:\Code\PythonCode\ocr\test\simfang.ttf')
+    txts = ['111']
     im_show = draw_ocr_box_txt(image, boxes1, txts)
     
     im_show = Image.fromarray(im_show)

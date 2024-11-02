@@ -9,17 +9,17 @@ from shapely.geometry import Polygon
 import onnxruntime as rt
 
 class DGOCRDetection:
-    def __init__(self, model_path, img_size=1600, cpu_num_thread=2):
+    def __init__(self, model_path, img_size=1600, cpu_thread_num=2):
         """读光OCR文字框检测模型 onnx 版本使用
 
         Args:
             model_path (str): 模型路径, xxx.onnx
             img_size (int, optional): 模型限制图片大小, 默认为 1600, 要是800的倍数增加，越大越精确，但速度会变慢
-            cpu_num_thread (int, optional): CPU线程数, 默认为 2
+            cpu_thread_num (int, optional): CPU线程数, 默认为 2
         """
         self.model_path = model_path
         self.img_size = img_size
-        self.cpu_num_thread = cpu_num_thread
+        self.cpu_thread_num = cpu_thread_num
         self.load_model()
     
     def load_model(self):
@@ -28,7 +28,7 @@ class DGOCRDetection:
         rtconfig = rt.SessionOptions()
         
         # 设置CPU线程数
-        rtconfig.intra_op_num_threads = self.cpu_num_thread
+        rtconfig.intra_op_num_threads = self.cpu_thread_num
         # 并行 ORT_PARALLEL  顺序 ORT_SEQUENTIAL
         rtconfig.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
         rtconfig.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL

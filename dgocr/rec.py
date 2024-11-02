@@ -7,7 +7,7 @@ import onnxruntime as rt
 import cv2
 
 class DGOCRRecognition:
-    def __init__(self, model_path, cpu_num_thread=2) -> None:
+    def __init__(self, model_path, cpu_thread_num=2) -> None:
         """读光OCR文字识别模型 onnx 版本使用
 
         Args:
@@ -15,18 +15,17 @@ class DGOCRRecognition:
             cpu_num_thread (int, optional): CPU线程数, 默认为 2
         """
         self.model_file = self.find_model_file(model_path)
-        self.cpu_num_thread = cpu_num_thread
+        self.cpu_thread_num = cpu_thread_num
         # 加载模型
         self.load_model()
 
-    
     def load_model(self):
         """加载模型"""
         # 创建一个SessionOptions对象
         rtconfig = rt.SessionOptions()
         
         # 设置CPU线程数
-        rtconfig.intra_op_num_threads = self.cpu_num_thread
+        rtconfig.intra_op_num_threads = self.cpu_thread_num
         # 并行 ORT_PARALLEL  顺序 ORT_SEQUENTIAL
         rtconfig.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
         rtconfig.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -58,22 +57,29 @@ class DGOCRRecognition:
         res = self.sess.run([self.output_name], {self.input_name: input_data})
         outprobs = np.exp(res[0]) / np.sum(np.exp(res[0]), axis=-1, keepdims=True)
         preds = np.argmax(outprobs, -1)
+        max_scores = np.amax(outprobs, axis=-1)    # 每个字符的预测概率
         
         # 解码结果
         batchSize, length = preds.shape
         final_str_list = []
+        str_score_list = []
         for i in range(batchSize):
             pred_idx = preds[i].data.tolist()
+            probability_list = max_scores[i]  # 概率
             last_p = 0
             str_pred = []
-            for p in pred_idx:
+            str_score = 1.0
+            for j, p in enumerate(pred_idx):
                 if p != last_p and p != 0:
                     str_pred.append(self.labelMapping[p])
+                    str_score *= probability_list[j]
                 last_p = p
             final_str = ''.join(str_pred)
             final_str_list.append(final_str)
+            str_score_list.append(str_score)
 
-        return final_str_list
+
+        return final_str_list, str_score_list
 
     
     def preprocess(self, img):
