@@ -88,6 +88,14 @@ large，small：`demo.py`
 | 2              | 0.85          | [0.64-1.2] | 560          | 118          |
 | 4              | 0.76          | [0.57-1.1] | 560          | 118          |
 
+
+
+## 协议
+
+本项目开源协议是 Apache License 2.0 ；但不包括[AlibabaPuHuiTi-3-45-Light.ttf](https://www.alibabafonts.com/#/font)字体，该字体版权归属[阿里巴巴](https://www.alibabafonts.com/#/font)。
+
+
+
 ## 感谢
 
 [读光-文字识别-行识别模型-中英-通用领域](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)

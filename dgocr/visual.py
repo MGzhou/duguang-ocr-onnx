@@ -19,7 +19,7 @@
 # limitations under the License.
 
 # from https://github.com/PaddlePaddle/PaddleOCR/blob/main/tools/infer/utility.py
-
+import os
 import cv2
 import numpy as np
 import PIL
@@ -27,6 +27,9 @@ from PIL import Image, ImageDraw, ImageFont
 import math
 import random
 
+
+# 默认使用阿里普惠字体
+FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "AlibabaPuHuiTi-3-45-Light.ttf")
 
 def str2bool(v):
     return v.lower() in ("true", "yes", "t", "y", "1")
@@ -77,7 +80,7 @@ def draw_ocr(
     txts=None,
     scores=None,
     drop_score=0.5,
-    font_path="./doc/fonts/simfang.ttf",
+    font_path=FONT_PATH,
 ):
     """
     Visualize the results of OCR detection and recognition
@@ -120,7 +123,7 @@ def draw_ocr_box_txt(
     txts=None,
     scores=None,
     drop_score=0.5,
-    font_path="./doc/fonts/simfang.ttf",
+    font_path=FONT_PATH,
 ):
     h, w = image.height, image.width
     img_left = image.copy()
@@ -147,7 +150,7 @@ def draw_ocr_box_txt(
     return np.array(img_show)
 
 
-def draw_box_txt_fine(img_size, box, txt, font_path="./doc/fonts/simfang.ttf"):
+def draw_box_txt_fine(img_size, box, txt, font_path=FONT_PATH):
     box_height = int(
         math.sqrt((box[0][0] - box[3][0]) ** 2 + (box[0][1] - box[3][1]) ** 2)
     )
@@ -187,8 +190,8 @@ def draw_box_txt_fine(img_size, box, txt, font_path="./doc/fonts/simfang.ttf"):
     return img_right_text
 
 
-def create_font(txt, sz, font_path="./doc/fonts/simfang.ttf"):
-    font_size = int(sz[1] * 0.99)
+def create_font(txt, sz, font_path=FONT_PATH):
+    font_size = int(sz[1] * 0.75)
     font = ImageFont.truetype(font_path, font_size, encoding="utf-8")
     if int(PIL.__version__.split(".")[0]) < 10:
         length = font.getsize(txt)[0]
@@ -227,7 +230,7 @@ def str_count(s):
 
 
 def text_visual(
-    texts, scores, img_h=400, img_w=600, threshold=0.0, font_path="./doc/simfang.ttf"
+    texts, scores, img_h=400, img_w=600, threshold=0.0, font_path="AlibabaPuHuiTi-3-45-Light.ttf"
 ):
     """
     create new blank img and draw txt on it
@@ -487,15 +490,22 @@ def merge_fragmented(boxes, x_threshold=10, y_threshold=10):
 
 if __name__ == "__main__":
 
-    img_path = r""
-    save_path = r""
-    image = Image.open(img_path).convert('RGB')
-    boxes1 = [[[220, 251], [393, 251], [393, 270], [220, 270]]]
+    # img_path = r""
+    # save_path = r""
+    # image = Image.open(img_path).convert('RGB')
+    # boxes1 = [[[220, 251], [393, 251], [393, 270], [220, 270]]]
     
-    txts = ['111']
-    im_show = draw_ocr_box_txt(image, boxes1, txts)
+    # txts = ['111']
+    # im_show = draw_ocr_box_txt(image, boxes1, txts)
     
-    im_show = Image.fromarray(im_show)
-    im_show.save(save_path)
+    # im_show = Image.fromarray(im_show)
+    # im_show.save(save_path)
+    pass
+
+    # 测试路径
+    b_path = os.path.dirname(os.path.abspath(__file__))
+    b_path = os.path.join(b_path, "")
+    print(b_path)
+    img_path = os.path.join(b_path, "data/test.png")
 
     
