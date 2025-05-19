@@ -503,9 +503,24 @@ if __name__ == "__main__":
     pass
 
     # 测试路径
-    b_path = os.path.dirname(os.path.abspath(__file__))
-    b_path = os.path.join(b_path, "")
-    print(b_path)
-    img_path = os.path.join(b_path, "data/test.png")
+    # b_path = os.path.dirname(os.path.abspath(__file__))
+    # b_path = os.path.join(b_path, "")
+    # print(b_path)
+    # img_path = os.path.join(b_path, "data/test.png")
+
+
+    img_path = r"xxx\det-2.jpg"
+    save_path = r"xxx\det-2-dd.jpg"
+    image = Image.open(img_path).convert('RGB')
+    boxes1 = [[[301.0, 428.0], [584.0, 427.0], [584.0, 454.0], [301.0, 455.0]], 
+              [[18.0, 90.0], [84.0, 88.0], [85.0, 102.0], [19.0, 104.0]], 
+              [[36.0, 50.0], [168.0, 50.0], [168.0, 61.0], [36.0, 61.0]], 
+              [[3.0, 14.0], [392.0, 13.0], [392.0, 29.0], [3.0, 30.0]]]
+    
+    txts = ['111', "222", "333", "444"]
+    im_show = draw_ocr_box_txt(image, boxes1, txts)
+    
+    im_show = Image.fromarray(im_show)
+    im_show.save(save_path)
 
     

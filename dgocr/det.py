@@ -9,79 +9,124 @@ from shapely.geometry import Polygon
 import onnxruntime as rt
 
 class DGOCRDetection:
-    def __init__(self, model_path, img_size=1600, cpu_thread_num=2):
+    def __init__(
+        self, 
+        model_path, 
+        img_size: int =1600, 
+        device: str ="cpu",
+        cpu_thread_num: int =2
+    ):
         """读光OCR文字框检测模型 onnx 版本使用
 
         Args:
             model_path (str): 模型路径, xxx.onnx
-            img_size (int, optional): 模型限制图片大小, 默认为 1600, 要是800的倍数增加，越大越精确，但速度会变慢
+            img_size (int, optional): 模型限制图片大小, 默认为 1600, 越大越精确，但速度会变慢
+            device (str): 运行设备，默认是使用cpu, 可以设置为 gpu 以使用显卡加速
             cpu_thread_num (int, optional): CPU线程数, 默认为 2
         """
         self.model_path = model_path
         self.img_size = img_size
+        self.device = device
         self.cpu_thread_num = cpu_thread_num
         self.load_model()
     
     def load_model(self):
         """加载模型"""
-        # 创建一个SessionOptions对象
-        rtconfig = rt.SessionOptions()
-        
-        # 设置CPU线程数
-        rtconfig.intra_op_num_threads = self.cpu_thread_num
-        # 并行 ORT_PARALLEL  顺序 ORT_SEQUENTIAL
-        rtconfig.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
-        rtconfig.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
-        rtconfig.log_severity_level = 4
-        rtconfig.enable_cpu_mem_arena = False
-        # rtconfig.enable_profiling = True  #  生成一个类似onnxruntime_profile__2023-05-07_09-02-15.json的日志文件，包含详细的性能数据（线程、每个运算符的延迟等）。
+        if self.device == "gpu":
+            providers = ["CUDAExecutionProvider"]
+            self.ort_session = rt.InferenceSession(self.model_path, providers=providers)
+        else:
+            # 创建一个SessionOptions对象
+            rtconfig = rt.SessionOptions()
+            # 设置CPU线程数
+            rtconfig.intra_op_num_threads = self.cpu_thread_num
+            # 并行 ORT_PARALLEL  顺序 ORT_SEQUENTIAL
+            rtconfig.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+            rtconfig.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
+            rtconfig.log_severity_level = 4
+            rtconfig.enable_cpu_mem_arena = False
+            # rtconfig.enable_profiling = True  #  生成一个类似onnxruntime_profile__2023-05-07_09-02-15.json的日志文件，包含详细的性能数据（线程、每个运算符的延迟等）。
+            providers = ["CPUExecutionProvider"]
+            self.ort_session = rt.InferenceSession(self.model_path, sess_options=rtconfig, providers=providers)
 
-        self.ort_session = rt.InferenceSession(self.model_path, sess_options=rtconfig)
-
         
-    def run(self, image):
-        """运行模型"""""
+    def run(self, inputs):
+        """
+        运行模型
+        
+        Returns:
+            {
+                "polygons":[[<img1_box1>, <img1_box2>...], [<img2_box1>,...]...],
+                "scores": [[<img1_box1_prob>, <img1_box2_prob>...], [<img2_box1_prob>,...]...]
+            }
+        """""
+        inputs = self.batch_preprocess(inputs)
+        orig_size_list = inputs["orig_size"]
+
+        outputs = self.ort_session.run(['pred'], {'images': inputs["img"]})
+        
+        boxes, scores = self.postprocess(outputs, orig_size_list)
+        # 批量结果
+        return {"polygons":boxes, "scores":scores}
+
+    def postprocess(self, outputs, orig_size_list):
+        thresh = 0.2  # 阈值
+        preds = outputs[0]  # [batch, 1, 1600, 1600]
+        if preds.shape[0] == 1:
+            preds = [preds]
+        else:
+            preds = np.split(preds, preds.shape[0], axis=0)
+
+        boxes_list, scores_list = [], []
+        for i, pred in enumerate(preds):
+            
+            pred = pred[0]
+            segmentation = pred > thresh
+            boxes, scores = boxes_from_bitmap(
+                pred, 
+                segmentation, 
+                orig_size_list[i][1],
+                orig_size_list[i][0], 
+                is_numpy=True
+            ) 
+            boxes_list.append(boxes)
+            scores_list.append(scores)
+        return boxes_list, scores_list
+
+    def batch_preprocess(self, inputs):
+        if not isinstance(inputs, list):
+            image, height, width = self.preprocess(inputs)
+            result = {"img":image, "orig_size":[(height, width)]}
+
+        else:
+            im_list = []
+            im_orig_size_list = []
+            for im in inputs:
+                temp_image, temp_height, temp_width = self.preprocess(im)
+                im_list.append(temp_image)
+                im_orig_size_list.append((temp_height,temp_width))
+
+            batch_im = np.vstack(im_list)
+            result = {
+                "img":batch_im,
+                "orig_size": im_orig_size_list,
+            }
+        return result
+
+    def preprocess(self, image):
         if isinstance(image, str):
             image = cv2.imread(image)
         height, width, _ = image.shape
-        image_resize = cv2.resize(image, (self.img_size,self.img_size))        
+        image_resize = cv2.resize(image, (self.img_size, self.img_size))        
         image_resize = image_resize - np.array([123.68, 116.78, 103.94], dtype=np.float32)
         image_resize /= 255.
         image_resize = np.expand_dims(image_resize.transpose(2, 0, 1), axis=0)
 
-        outputs = self.ort_session.run(['pred'], {'images': image_resize})
-
-        ## 后处理
-        thresh = 0.2
-        pred = outputs[0]
-        segmentation = pred > thresh
-        boxes, scores = boxes_from_bitmap(pred, segmentation, width,
-                                            height, is_numpy=True) 
-
-        return {"polygons":boxes, "scores":scores}
-
-
-
-    def export_onnx(self, model_path, output_path, img_size=1600):
-        """
-        该模型 onnx 可能与硬件有关，如果报错，尝试自行导出onnx模型
-        导出模型, modelscope 版本 1.9.5
-
-        Args:
-            model_path (str): 模型路径
-            output_path (str): 输出路径, 会在输出路径下生成 model.onnx 模型文件
-            img_size (int, optional): 图片大小, 默认为 1600, 要是800的倍数增加，越大越精确，但速度会变慢
-
-        """
-        from modelscope.models import Model
-        from modelscope.exporters import Exporter
-        model = Model.from_pretrained(model_path)
-        Exporter.from_model(model).export_onnx(
-            input_shape=(1,3,img_size,img_size), output_dir=output_path)  # input_shape 的图片尺寸要安装 800倍数增加
+        return image_resize, height, width
 
 
 """
-解析工具函数
+解码工具函数
 """
 
 def boxes_from_bitmap(pred, _bitmap, dest_width, dest_height, is_numpy=False):
@@ -180,23 +225,15 @@ def get_mini_boxes(contour):
 
 if __name__ == '__main__':
     
-    model_path = "model_1600x1600.onnx"
-    image_path = "img-1.png"
-    det = DGOCRDetection(model_path)
-    
+    model_path = r"xxx\model_1600x1600.onnx"
+    img1 = r'xxx'
+    img2 = r'xxx'
+    det = DGOCRDetection(model_path, img_size=1600, device="cpu")
     t1 = time.time()
-    
-    boxes = det.run(image_path)
+    # for i in range(100):
+    boxes = det.run([img1, img2, img1])
 
     print(boxes)
+    print(boxes["polygons"])
     t2 = time.time()
     print(f"time: {t2-t1}")
-
-
-
-
-
-
-
-
-

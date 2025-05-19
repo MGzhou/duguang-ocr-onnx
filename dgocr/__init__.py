@@ -4,4 +4,4 @@
 
 from .dgocr import DGOCR
 
-__version__ = "0.0.2"
+__version__ = "2.0.0"

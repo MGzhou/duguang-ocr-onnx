@@ -182,3 +182,14 @@ def calculate_polygon_area(points):
         x2, y2 = points[(i + 1) % n]
         area += x1 * y2 - x2 * y1
     return abs(area) / 2
+
+if __name__=="__main__":
+    print("hello")
+    pos_list = [[302, 428, 584, 425, 584, 452, 303, 455],
+       [438, 387, 451, 387, 451, 422, 438, 422],
+       [ 19,  89,  86,  89,  86, 103,  19, 103],
+       [ 34,  49, 170,  49, 170,  62,  34,  62],
+       [ 35,  13, 393,  13, 393,  29,  35,  29],
+       [  1,  12,  11,  12,  11,  31,   1,  31]]
+    new_pos = [order_point(a).tolist() for a in pos_list]
+    print(new_pos)

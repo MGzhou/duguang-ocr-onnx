@@ -1,26 +1,39 @@
 <br>
 <h1 align="center">读光 OCR ONNX</h1>
 <br>
-<p align="center">
-<a href="https://github.com/xxx/xxx/blob/master/README_en_US.md">中文</a>  |  <a href="">English</a>
-</p>
+
+
+
+
+## 进展🎉
+
+- [2025/5]  支持【批量】和【GPU】推理。为`large`和`base_seglink++` 的det模型新增`512x512`, `1024x1024` 等多种尺寸的版本
 
 ## ✨简介
 
-本项目旨在提供一个简单易用的读光OCR ONNX 模型解决方案，以便快速上手并集成读光OCR模型到自己的项目中。
-
-[读光OCR](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)是一款功能强大的光学字符识别模型，支持中文、英文识别。采用ONNX格式，我们可以更方便地进行部署和推理。
+本项目是一个用于[读光OCR](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)模型的ONNX格式推理方案，帮助快速集成高性能`中英文`OCR功能。
 
 ![](./assets/result.png)
 
+## 主要特性
+
+- 🚀 支持读光OCR模型的ONNX格式推理
+- ⚡ 支持批量和GPU推理
+- 🔍 支持多种图片格式输入（jpg, png）
+- 📦 简单易用的API接口
+
 ## 🛠️ 使用
 
-### 环境安装
+### 安装依赖
+
+【1】CPU 
+
+采用 pip 直接安装下面依赖即可
 
 ```python
 onnx
 onnxruntime
-numpy
+numpy==1.26.3
 pyclipper
 shapely
 opencv-python
@@ -28,37 +41,159 @@ pillow
 ```
 
 > 测试时使用的依赖具体版本可以参考 `requirements.txt` 文件
+
+【2】GPU 
+
+测试所用依赖：requirements_gpu.txt
+
+除了`onnxruntime-gpu` ，其他依赖均可以通过pip直接安装。
+
+因为国内通过pip直接安装最新的 `onnxruntime-gpu` 默认只支持 `cuda12.x` 。如果想安装支持`cuda 11.x` 版本，需要使用onnxruntime提供的源（[官方文档](https://onnxruntime.ai/docs/install/#python-installs) ）
+
+```python
+pip install onnxruntime-gpu --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-11/pypi/simple/
+```
+
+> 注意，这可能需要`魔法`上网，也可以尝试在网页[onnxruntime-gpu 1.20.1](https://aiinfra.visualstudio.com/PublicPackages/_artifacts/feed/onnxruntime-cuda-11/PyPI/onnxruntime-gpu/overview/1.20.1)
 >
-> 目前只测试了cpu环境
+> 还需要特别注意，安装错误的 onnxruntime-gpu 就算不支持GPU，也不会**报错**，而是使用CPU推理。因此，需要测试确认 onnxruntime-gpu 是否安装正确。
+>
+> 根据官方文档说明 1.18.1 版本同时支持cuda11和cuda12，但没有测试过。如果是cuda11,但安装失败，可以尝试安装1.18.1
+
+
+
 
 ### 模型下载
 
-需要下载下面表格中一对文字识别和检测模型。
+需要下载下面表格中一对文字识别(`rec`)和检测(`det`)模型。
 
-| 模型           | 模型大小      | 模型原始仓库                                                                                                                                                                                             | 百度网盘下载                                                  | modelscope下载                                                     | 个人评价 |
-| -------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ | -------- |
-| base_seglink++ | 73.2MB+78MB   | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://modelscope.cn/models/iic/cv_resnet18_ocr-detection-line-level_damo/summary)               | [地址](https://pan.baidu.com/s/1HRDW2-JFnzDoMcdU560OlA?pwd=qjl8) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) | 9分      |
-| large          | 73.2MB+46.4MB | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_resnet18_ocr-detection-db-line-level_damo/summary)        | [地址](https://pan.baidu.com/s/1BQeeOelYU0N5PJSuf_kG3A?pwd=gztj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) | 8分      |
-| small          | 7.4MB+5.2MB   | rec[地址](https://modelscope.cn/models/iic/cv_LightweightEdge_ocr-recognitoin-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_proxylessnas_ocr-detection-db-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1kyWRX18-5MRkizyoGz-I7Q?pwd=khkj) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx/summary) | 5分      |
+| 模型           | 模型大小      | 模型原始仓库                                                 | 百度网盘下载                                                 | modelscope下载（高速）                                       | 个人评价 |
+| -------------- | ------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | -------- |
+| base_seglink++ | 73.2MB+78MB   | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://modelscope.cn/models/iic/cv_resnet18_ocr-detection-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1Vch_5kcL_FqQet5G9pfEJQ?pwd=tjp9) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx-v2) | 9分      |
+| large          | 73.2MB+46.4MB | rec[地址](https://modelscope.cn/models/iic/cv_convnextTiny_ocr-recognition-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_resnet18_ocr-detection-db-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1Vch_5kcL_FqQet5G9pfEJQ?pwd=tjp9) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx-v2) | 8分      |
+| small          | 7.4MB+5.2MB   | rec[地址](https://modelscope.cn/models/iic/cv_LightweightEdge_ocr-recognitoin-general_damo/summary)，det [地址](https://www.modelscope.cn/models/iic/cv_proxylessnas_ocr-detection-db-line-level_damo/summary) | [地址](https://pan.baidu.com/s/1Vch_5kcL_FqQet5G9pfEJQ?pwd=tjp9) | [地址](https://modelscope.cn/models/mscoder/duguang-ocr-onnx-v2) | 5分      |
 
 > rec 为文本识别模型，det为文本检测模型
+>
+> 注意，模型已经更新，旧版模型不适合目前项目代码，请下载最新版模型文件
 
-### 使用示例
+### 快速开始
 
-base_seglink++：`demo_seglink.py`
-
-large，small：`demo.py`
-
-打印结果说明
+**1 克隆项目**：
 
 ```
+git clone https://github.com/MGzhou/duguang-ocr-onnx.git
+cd duguang-ocr-onnx
+```
+
+或手动下载本项目代码
+
+**2 运行示例脚本**：
+
+**base_seglink++**：`demo_seglink.py`
+
+```python
+from dgocr.dgocr import DGOCR
+
+# 模型参数
+rec_path = r"models\base_seglink++\recognition_model_general"                     # 文字识别模型路径
+det_path = r"models\base_seglink++\detection_model_general\model_512x512.onnx"    # 文本检测模型文件路径
+img_size=512            # 文本检测模型内部预处理时使用的固定尺寸（单位：像素），与输入图片的实际尺寸无关
+model_type = "seglink"  # 模型类型
+cpu_thread_num=4        # onnx 运行线程数, 线程越多，识别速度越快
+device = "cpu"          # 如果想使用gpu设置为 `device = "gpu"`，同时cpu_thread_num会失效
+
+# 初始化模型
+ocr = DGOCR(rec_path, det_path, img_size=img_size, model_type=model_type, device=device, cpu_thread_num=cpu_thread_num)
+
+img1 = "data/det-1.jpg"   	# 图片
+img2 = "data/det-2.jpg"
+batch_image = [img1, img2]	# 批量，输入的图片数量就是批次大小
+
+# 识别图片
+ocr_result = ocr.run(images=batch_image)
+
+# 打印结果
+for i in range(len(ocr_result)):
+    print(f"第{i+1}张图片结果")
+    print(f"{ocr_result[i]}")
+
+# 可视化
+for i in range(len(ocr_result)):
+    org_path = f"data/det-{i+1}.jpg"
+    save_path = f"data/result-det-{i+1}-seg.png"
+    ocr.draw(org_path, ocr_result[i], save_path)
+    print(f"已经将可视化结果保存至：{save_path}")
+```
+
+
+
+**large，small**：`demo.py`
+
+```python
+from dgocr.dgocr import DGOCR
+
+# 模型参数
+rec_path = r"models\large\recognition_model_general"                     # 文字识别模型路径
+det_path = r"models\large\detection_model_general\model_512x512.onnx"    # 文本检测模型文件路径
+img_size=512            # 文本检测模型内部预处理时使用的固定尺寸（单位：像素），与输入图片的实际尺寸无关
+model_type = "common"   # 模型类型
+cpu_thread_num=4        # onnx 运行线程数, 线程越多，识别速度越快
+device = "cpu"          # 如果想使用gpu设置为 `device = "gpu"`，同时cpu_thread_num会失效
+
+# 初始化模型
+ocr = DGOCR(rec_path, det_path, img_size=img_size, model_type=model_type, device=device, cpu_thread_num=cpu_thread_num)
+
+
+img1 = "data/det-1.jpg"     # 图片
+img2 = "data/det-2.jpg"
+batch_image = [img1, img2]  # 批量，输入的图片数量就是批次大小
+
+# 识别图片
+ocr_result = ocr.run(images=batch_image)
+
+# 打印结果
+for i in range(len(ocr_result)):
+    print(f"第{i+1}张图片结果")
+    print(f"{ocr_result[i]}")
+
+# 可视化
+for i in range(len(ocr_result)):
+    org_path = f"data/det-{i+1}.jpg"
+    save_path = f"data/result-det-{i+1}.png"
+    ocr.draw(org_path, ocr_result[i], save_path)
+    print(f"已经将可视化结果保存至：{save_path}")
+```
+
+> 注意，
+>
+> - `img_size=512` 参数是文本检测模型内部预处理时使用的固定尺寸（单位：像素）。也就是在实际使用时，输入图片的尺寸可以任意的。
+>
+> - `device` 参数，使用GPU推理时，设置为 `gpu` 
+>
+> - `images`, 输入的图片可以是以列表批量输入处理，也可以 单张图片输入处理，例如`images="data/det-1.jpg"`。 需要注意list批量时，输入的图片数量就是批次大小，如果批次太多，会导致显存不够、cpu运算批次过慢等情况
+>
+>   images输入还可以是opencv-python读取的图片向量数据，如`images=[cv2.imread(img1), cv2.imread(img2)]`
+>   
+> - 使用GPU时，推荐显存在4GB以上
+
+
+**OCR结果说明**
+
+```python
 [[[73.0, 612.0], [729.0, 626.0], [728.0, 670.0], [72.0, 656.0]], ('家记忆研究院国家记忆研究院波', 0.9971)]
 
 三部分分别是
 [box, (text,score)]; box 为文本框四个点坐标, text 为识别的文本, score 为文本的置信度
 ```
 
-## 📍测试
+
+
+## 📍GPU 测试
+
+测试中。。。
+
+## 📍CPU 测试
 
 > 20张图片
 >
@@ -88,13 +223,9 @@ large，small：`demo.py`
 | 2              | 0.85          | [0.64-1.2] | 560          | 118          |
 | 4              | 0.76          | [0.57-1.1] | 560          | 118          |
 
-
-
 ## 协议
 
 本项目开源协议是 Apache License 2.0 ；但不包括[AlibabaPuHuiTi-3-45-Light.ttf](https://www.alibabafonts.com/#/font)字体，该字体版权归属[阿里巴巴](https://www.alibabafonts.com/#/font)。
-
-
 
 ## 感谢
 

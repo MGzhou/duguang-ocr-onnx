@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-# -*- coding:utf-8 -*-
+# -*- coding: utf-8 -*-
+'''
+@Author : MGzhou
+@Time   : 2025/05/07 20:53:44
+@Desc   : None
+'''
 
 import os
 import numpy as np
@@ -7,36 +12,48 @@ import onnxruntime as rt
 import cv2
 
 class DGOCRRecognition:
-    def __init__(self, model_path, cpu_thread_num=2) -> None:
+    def __init__(
+        self, 
+        model_path, 
+        device: str = "cpu",
+        cpu_thread_num=2
+    ) -> None:
         """读光OCR文字识别模型 onnx 版本使用
 
         Args:
             model (str): 模型路径
+            device (str): 运行设备，默认是使用cpu, 可以设置为 gpu 以使用显卡加速
             cpu_num_thread (int, optional): CPU线程数, 默认为 2
         """
         self.model_file = self.find_model_file(model_path)
+        self.device = device
         self.cpu_thread_num = cpu_thread_num
         # 加载模型
         self.load_model()
 
     def load_model(self):
         """加载模型"""
-        # 创建一个SessionOptions对象
-        rtconfig = rt.SessionOptions()
-        
-        # 设置CPU线程数
-        rtconfig.intra_op_num_threads = self.cpu_thread_num
-        # 并行 ORT_PARALLEL  顺序 ORT_SEQUENTIAL
-        rtconfig.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
-        rtconfig.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
-        rtconfig.log_severity_level = 4
-        rtconfig.enable_cpu_mem_arena = False
-        # rtconfig.enable_profiling = True
+        if self.device == "gpu":
+            providers = ["CUDAExecutionProvider"]
+            self.sess = rt.InferenceSession(self.model_file["model"], providers=providers)
+        else:
+            # 创建一个SessionOptions对象
+            rtconfig = rt.SessionOptions()
+            
+            # 设置CPU线程数
+            rtconfig.intra_op_num_threads = self.cpu_thread_num
+            # 并行 ORT_PARALLEL  顺序 ORT_SEQUENTIAL
+            rtconfig.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+            rtconfig.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
+            rtconfig.log_severity_level = 4
+            rtconfig.enable_cpu_mem_arena = False
 
-        self.sess = rt.InferenceSession(self.model_file["model"], sess_options=rtconfig)
+            providers = ["CPUExecutionProvider"]
+            self.sess = rt.InferenceSession(self.model_file["model"],sess_options=rtconfig, providers=providers)
+        
         self.input_name = self.sess.get_inputs()[0].name
         self.output_name= self.sess.get_outputs()[0].name
-        
+
         self.labelMapping = dict()
         with open(self.model_file["vocab"], 'r', encoding='utf-8') as f:
             lines = f.readlines()
@@ -46,20 +63,32 @@ class DGOCRRecognition:
                 self.labelMapping[cnt] = line
                 cnt += 1
     
-    def run(self, image):
-        """运行模型"""
-        # 读取图片
-        if isinstance(image, str):
-            image = cv2.imread(image)
-        input_data = self.preprocess(image)
+    def run(self, inputs):
+        """
+        运行模型
+        
+        Returns:
+            {
+                'preds': ['<img1_str>', '<img2_str>'...], 
+                'probs': [<img1_str_prob>, <img2_str_prob>...]
+            }
+        """
+        input_data = self.batch_preprocess(inputs)
+        
+        batch_size = input_data.shape[0] // 3
         
         # 运行模型
-        res = self.sess.run([self.output_name], {self.input_name: input_data})
-        outprobs = np.exp(res[0]) / np.sum(np.exp(res[0]), axis=-1, keepdims=True)
+        outputs = self.sess.run([self.output_name], {self.input_name: input_data})
+
+        outputs = self.postprocess(batch_size, outputs)
+
+        return outputs
+    
+    def postprocess(self, batch_size, inputs):
+        outprobs = np.exp(inputs[0]) / np.sum(np.exp(inputs[0]), axis=-1, keepdims=True)
         preds = np.argmax(outprobs, -1)
         max_scores = np.amax(outprobs, axis=-1)    # 每个字符的预测概率
-        
-        # 解码结果
+
         batchSize, length = preds.shape
         final_str_list = []
         str_score_list = []
@@ -67,8 +96,8 @@ class DGOCRRecognition:
             pred_idx = preds[i].data.tolist()
             probability_list = max_scores[i]  # 概率
             last_p = 0
-            str_pred = []
             str_score = 1.0
+            str_pred = []
             for j, p in enumerate(pred_idx):
                 if p != last_p and p != 0:
                     str_pred.append(self.labelMapping[p])
@@ -77,18 +106,61 @@ class DGOCRRecognition:
             final_str = ''.join(str_pred)
             final_str_list.append(final_str)
             str_score_list.append(str_score)
+        
+        assert len(final_str_list) == batch_size or len(final_str_list) == batch_size * 3, "模型预测的字符串需要等于batch_size或batch_size*3"
 
+        #如果是LightweightEdge模型，还需要进下一步处理
+        if len(final_str_list) == batch_size * 3:
+            new_final_str_list, new_str_score_list = [], []
+            for i in range(0, len(final_str_list), 3):
+                temp_strs = final_str_list[i:i+3]
+                temp_probs = str_score_list[i:i+3]
+                s, prob = self.merge_strings_with_overlap(temp_strs, temp_probs)
+                new_final_str_list.append(s)
+                new_str_score_list.append(prob)
+            final_str_list, str_score_list = new_final_str_list, new_str_score_list
+        return {'preds': final_str_list, 'probs': str_score_list}
+    
+    def merge_strings_with_overlap(self, strings, probs):
+        if not strings:
+            return ""
+        
+        result = strings[0]
+        for s in strings[1:]:
+            # 找到最长可能的重叠部分
+            max_overlap = min(len(result), len(s))
+            best_overlap = 0
+            
+            for overlap in range(max_overlap, -1, -1):
+                if result.endswith(s[:overlap]):
+                    best_overlap = overlap
+                    break
+            
+            # 合并字符串，只保留一个重叠部分
+            result += s[best_overlap:]
+        prob = 1.0
+        for i in probs:
+            prob *= i
+        return result, prob
 
-        return final_str_list, str_score_list
-
+    def batch_preprocess(self, inputs):
+        if isinstance(inputs, list):
+            im_list = [self.preprocess(im) for im in inputs]
+            images = np.vstack(im_list)
+            return images
+        else:
+            image = self.preprocess(inputs)
+            return image
     
     def preprocess(self, img):
         """
-        Introduction:
-            预处理
-        Params:
+        预处理
+
+        Args:
             img: 图片
         """
+        if isinstance(img, str):
+            img = cv2.imread(img)
         img = self.keepratio_resize(img)
         
         img = np.float32(img)
@@ -106,9 +178,9 @@ class DGOCRRecognition:
     
     def find_model_file(self, model_path):
         """
-        Introduction:
-            发现模型文件, model.onnx, vocab.txt
-        Params:
+        发现模型文件, model.onnx, vocab.txt
+
+        Args:
             model_path: 放置模型的文件夹
         """
         model_file = {"model":"", "vocab":""}
@@ -128,10 +200,10 @@ class DGOCRRecognition:
         """
         保持宽高比进行缩放
 
-        参数:
+        Args:
             img (numpy.ndarray): 输入图像，形状为 (H, W, C)
 
-        返回:
+        Returns:
             numpy.ndarray: 缩放后的图像，形状为 (32, 804, C)
         """
         # 计算当前图像的宽高比
@@ -164,13 +236,21 @@ class DGOCRRecognition:
     
 
 if __name__=="__main__":
-    model_path = r"rec_model"
+    model_path = r"xxx\recognition_model_general"
 
-    rec = DGOCRRecognition(model_path)
-    img_path = r"img-1.png"
-    a = rec.run(img_path)
-    print(a)
+    rec = DGOCRRecognition(model_path, device="gpu")
+    img1 = r"xxx\rec-1.png"
+    img2 = r"xxx\rec-2.png"
 
+    a = rec.run([img1,img2])
+    print(f"res = {a}")
+    import time
+    t1 = time.time()
+    # for i in range(100):
+    #     a = rec.run(img_path)
+    #     print(a)
+
+    print(f"耗时 = {time.time() - t1}  s")
 
 
 
